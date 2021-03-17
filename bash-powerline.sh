@@ -4,7 +4,6 @@
 #POWERLINE_GIT=0
 
 __powerline() {
-    
     # Colors
     COLOR_RESET='\[\033[m\]'
     COLOR_CWD=${COLOR_CWD:-'\[\033[0;34m\]'} # blue
@@ -14,8 +13,8 @@ __powerline() {
     COLOR_FAILURE=${COLOR_FAILURE:-'\[\033[0;31m\]'} # red
 
     # Symbols
-    # SYMBOL_GIT_BRANCH=${SYMBOL_GIT_BRANCH:-⑂}
-    # SYMBOL_GIT_MODIFIED=${SYMBOL_GIT_MODIFIED:-*}
+    SYMBOL_GIT_BRANCH=${SYMBOL_GIT_BRANCH:-ψ}
+    SYMBOL_GIT_MODIFIED=${SYMBOL_GIT_MODIFIED:-*}
     SYMBOL_GIT_PUSH=${SYMBOL_GIT_PUSH:-↑}
     SYMBOL_GIT_PULL=${SYMBOL_GIT_PULL:-↓}
 
@@ -53,7 +52,7 @@ __powerline() {
                 [[ $line =~ ahead\ ([0-9]+) ]] && marks+=" $SYMBOL_GIT_PUSH${BASH_REMATCH[1]}"
                 [[ $line =~ behind\ ([0-9]+) ]] && marks+=" $SYMBOL_GIT_PULL${BASH_REMATCH[1]}"
             else # branch is modified if output contains more lines after the header line
-                # marks="$SYMBOL_GIT_MODIFIED$marks"
+                marks="$SYMBOL_GIT_MODIFIED$marks"
                 break
             fi
         done < <($git_eng status --porcelain --branch 2>/dev/null)  # note the space between the two <
@@ -71,18 +70,19 @@ __powerline() {
         local _A=0
         local _M=0
         local _D=0
+        local bound=30
 
         # scan first two lines of output from `git status`
         while IFS= read -r line; do
             _n=$(($_n + 1))
-            if [[ $_n -gt 10 ]]; then break; fi
+            if [[ $_n -gt $bound ]]; then break; fi
             [[ $line =~ ^"A" ]] && _A=$(($_A + 1))
             [[ $line =~ ^"M" ]] && _M=$(($_M + 1))
             [[ $line =~ ^"D" ]] && _D=$(($_D + 1))
         done < <($git_eng status --porcelain --branch 2>/dev/null)  # note the space between the two <
 
         _S=$(($_A + $_M + $_D))
-        if [[ $_S == 0 ]]; then
+        if [[ $_S == 0 || $_n -gt $bound ]]; then
             printf "" && return
         else
             printf " +$_A ~$_M -$_D"
@@ -98,11 +98,12 @@ __powerline() {
         local _A=0
         local _M=0
         local _D=0
+        local bound=30
 
         # scan first two lines of output from `git status`
         while IFS= read -r line; do
             _n=$(($_n + 1))
-            if [[ $_n -gt 10 ]]; then break; fi
+            if [[ $_n -gt $bound ]]; then break; fi
             [[ $line =~ ^"?? " ]] && _A=$(($_A + 1))
             [[ $line =~ ^" M " ]] && _M=$(($_M + 1))
             [[ $line =~ ^" D " ]] && _D=$(($_D + 1))
@@ -113,7 +114,7 @@ __powerline() {
         done < <($git_eng status --porcelain --branch 2>/dev/null)  # note the space between the two <
 
         _S=$(($_A + $_M + $_D))
-        if [[ $_S == 0 ]]; then
+        if [[ $_S == 0 || $_n -gt $bound ]]; then
             printf "" && return
         else
             printf " +$_A ~$_M -$_D"
@@ -150,7 +151,7 @@ __powerline() {
             fi
             if [[ -n "$__powerline_git_info" ]]; then
                 if [[ $__powerline_git_branch = $__powerline_git_info ]]; then
-                    [[ -n $__powerline_git_remote ]] && __powerline_git_info+=" ≡"
+                    [[ -n $__powerline_git_remote ]] && __powerline_git_info+=" $SYMBOL_GIT_BRANCH"
                 fi
                 __powerline_git_info=" [$__powerline_git_info]"
             fi
