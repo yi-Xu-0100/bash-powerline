@@ -4,16 +4,18 @@
 #POWERLINE_GIT=0
 
 __powerline() {
+    
     # Colors
     COLOR_RESET='\[\033[m\]'
     COLOR_CWD=${COLOR_CWD:-'\[\033[0;34m\]'} # blue
-    COLOR_GIT=${COLOR_GIT:-'\[\033[0;36m\]'} # cyan
+    # COLOR_GIT=${COLOR_GIT:-'\[\033[0;36m\]'} # cyan
+    COLOR_GIT=${COLOR_GIT:-'\[\033[0;33m\]'} # yellow
     COLOR_SUCCESS=${COLOR_SUCCESS:-'\[\033[0;32m\]'} # green
     COLOR_FAILURE=${COLOR_FAILURE:-'\[\033[0;31m\]'} # red
 
     # Symbols
-    SYMBOL_GIT_BRANCH=${SYMBOL_GIT_BRANCH:-⑂}
-    SYMBOL_GIT_MODIFIED=${SYMBOL_GIT_MODIFIED:-*}
+    # SYMBOL_GIT_BRANCH=${SYMBOL_GIT_BRANCH:-⑂}
+    # SYMBOL_GIT_MODIFIED=${SYMBOL_GIT_MODIFIED:-*}
     SYMBOL_GIT_PUSH=${SYMBOL_GIT_PUSH:-↑}
     SYMBOL_GIT_PULL=${SYMBOL_GIT_PULL:-↓}
 
@@ -35,7 +37,7 @@ __powerline() {
 
         if [[ -n "$ref" ]]; then
             # prepend branch symbol
-            ref=$SYMBOL_GIT_BRANCH$ref
+            ref=$ref
         else
             # get tag name or short unique hash
             ref=$($git_eng describe --tags --always 2>/dev/null)
@@ -47,17 +49,75 @@ __powerline() {
 
         # scan first two lines of output from `git status`
         while IFS= read -r line; do
-            if [[ $line =~ ^## ]]; then # header line
+            if [[ $line =~ ^"##" ]]; then # header line
                 [[ $line =~ ahead\ ([0-9]+) ]] && marks+=" $SYMBOL_GIT_PUSH${BASH_REMATCH[1]}"
                 [[ $line =~ behind\ ([0-9]+) ]] && marks+=" $SYMBOL_GIT_PULL${BASH_REMATCH[1]}"
             else # branch is modified if output contains more lines after the header line
-                marks="$SYMBOL_GIT_MODIFIED$marks"
+                # marks="$SYMBOL_GIT_MODIFIED$marks"
                 break
             fi
         done < <($git_eng status --porcelain --branch 2>/dev/null)  # note the space between the two <
 
         # print the git branch segment without a trailing newline
-        printf " $ref$marks"
+        printf "$ref$marks" # "$ref$marks"
+    }
+
+    __git_save() {
+        [[ $POWERLINE_GIT = 0 ]] && return # disabled
+        hash git 2>/dev/null || return # git not found
+        local git_eng="env LANG=C git"   # force git output in English to make our work easier
+        local _n=0
+        local _S=0
+        local _A=0
+        local _M=0
+        local _D=0
+
+        # scan first two lines of output from `git status`
+        while IFS= read -r line; do
+            _n=$(($_n + 1))
+            if [[ $_n -gt 10 ]]; then break; fi
+            [[ $line =~ ^"A" ]] && _A=$(($_A + 1))
+            [[ $line =~ ^"M" ]] && _M=$(($_M + 1))
+            [[ $line =~ ^"D" ]] && _D=$(($_D + 1))
+        done < <($git_eng status --porcelain --branch 2>/dev/null)  # note the space between the two <
+
+        _S=$(($_A + $_M + $_D))
+        if [[ $_S == 0 ]]; then
+            printf "" && return
+        else
+            printf " +$_A ~$_M -$_D"
+        fi
+    }
+
+    __git_change() {
+        [[ $POWERLINE_GIT = 0 ]] && return # disabled
+        hash git 2>/dev/null || return # git not found
+        local git_eng="env LANG=C git"   # force git output in English to make our work easier
+        local _n=0
+        local _S=0
+        local _A=0
+        local _M=0
+        local _D=0
+
+        # scan first two lines of output from `git status`
+        while IFS= read -r line; do
+            _n=$(($_n + 1))
+            if [[ $_n -gt 10 ]]; then break; fi
+            [[ $line =~ ^"?? " ]] && _A=$(($_A + 1))
+            [[ $line =~ ^" M " ]] && _M=$(($_M + 1))
+            [[ $line =~ ^" D " ]] && _D=$(($_D + 1))
+            [[ $line =~ ^"AM " ]] && _M=$(($_M + 1))
+            [[ $line =~ ^"MM " ]] && _M=$(($_M + 1))
+            [[ $line =~ ^"AD " ]] && _D=$(($_D + 1))
+            [[ $line =~ ^"MD " ]] && _D=$(($_D + 1))
+        done < <($git_eng status --porcelain --branch 2>/dev/null)  # note the space between the two <
+
+        _S=$(($_A + $_M + $_D))
+        if [[ $_S == 0 ]]; then
+            printf "" && return
+        else
+            printf " +$_A ~$_M -$_D"
+        fi
     }
 
     ps1() {
@@ -69,15 +129,32 @@ __powerline() {
             local symbol="$COLOR_FAILURE $PS_SYMBOL $COLOR_RESET"
         fi
 
-        local cwd="$COLOR_CWD\w$COLOR_RESET"
+        local cwd="$COLOR_CWD\W$COLOR_RESET"
         # Bash by default expands the content of PS1 unless promptvars is disabled.
         # We must use another layer of reference to prevent expanding any user
         # provided strings, which would cause security issues.
         # POC: https://github.com/njhartwell/pw3nage
         # Related fix in git-bash: https://github.com/git/git/blob/9d77b0405ce6b471cb5ce3a904368fc25e55643d/contrib/completion/git-prompt.sh#L324
         if shopt -q promptvars; then
-            __powerline_git_info="$(__git_info)"
-            local git="$COLOR_GIT\${__powerline_git_info}$COLOR_RESET"
+            local __powerline_git_branch="$(git symbolic-ref --short -q HEAD 2>/dev/null)"
+            local __powerline_git_info="$(__git_info)"
+            local __powerline_git_save="$(__git_save)"
+            local __powerline_git_change="$(__git_change)"
+            local __powerline_git_remote="$(git rev-parse --abbrev-ref --symbolic-full-name @{u} 2>/dev/null)"
+            if [[ -n "$__powerline_git_save" && -n "$__powerline_git_change" ]]; then
+                __powerline_git_info+="$COLOR_SUCCESS$__powerline_git_save $COLOR_GIT|$COLOR_FAILURE$__powerline_git_change !$COLOR_GIT"
+            elif [[ -n "$__powerline_git_save" ]]; then
+                __powerline_git_info+="$COLOR_SUCCESS$__powerline_git_save ~$COLOR_GIT"
+            elif [[ -n "$__powerline_git_change" ]]; then
+                __powerline_git_info+="$COLOR_FAILURE$__powerline_git_change !$COLOR_GIT"
+            fi
+            if [[ -n "$__powerline_git_info" ]]; then
+                if [[ $__powerline_git_branch = $__powerline_git_info ]]; then
+                    [[ -n $__powerline_git_remote ]] && __powerline_git_info+=" ≡"
+                fi
+                __powerline_git_info=" [$__powerline_git_info]"
+            fi
+            local git="$COLOR_GIT$__powerline_git_info$COLOR_RESET"
         else
             # promptvars is disabled. Avoid creating unnecessary env var.
             local git="$COLOR_GIT$(__git_info)$COLOR_RESET"
