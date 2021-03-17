@@ -49,8 +49,8 @@ __powerline() {
         # scan first two lines of output from `git status`
         while IFS= read -r line; do
             if [[ $line =~ ^"##" ]]; then # header line
-                [[ $line =~ ahead\ ([0-9]+) ]] && marks+=" $SYMBOL_GIT_PUSH${BASH_REMATCH[1]}"
                 [[ $line =~ behind\ ([0-9]+) ]] && marks+=" $SYMBOL_GIT_PULL${BASH_REMATCH[1]}"
+                [[ $line =~ ahead\ ([0-9]+) ]] && marks+=" $SYMBOL_GIT_PUSH${BASH_REMATCH[1]}"
             else # branch is modified if output contains more lines after the header line
                 marks="$SYMBOL_GIT_MODIFIED$marks"
                 break
