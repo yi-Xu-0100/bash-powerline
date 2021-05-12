@@ -1,3 +1,6 @@
+[core]
+	autocrlf = false
+	safecrlf = true
 [credential]
 	helper = store
 [sendpack]
@@ -14,3 +17,5 @@
 	lg = log --graph --pretty=format:'%C(yellow)%h%Creset - %s %Cgreen(%an, %cr)%C(cyan)%d%Creset' --abbrev-commit
 	allfetch = fetch --all --prune
 	purge = !bash -c \"git branch -r | awk '{print \\$1}' | grep -E -v -f /dev/fd/0 <(git branch -vv | grep origin) | awk '{print \\$1}' | xargs -r git branch -D\"
+	syncmaster = !bash -c \"git allfetch && git reset --hard upstream/master\"
+	syncmain = !bash -c \"git allfetch && git reset --hard upstream/main\"
