@@ -58,3 +58,11 @@ I'd rather stick with existing unicode symbols.
   Powerline.
 - [emacs powerline](https://github.com/milkypostman/powerline): Powerline for
   Emacs
+
+## etc
+
+The path is pointed to the `Git` program.
+
+## user
+
+The path is pointed to the `%UserProfile%` folder.
