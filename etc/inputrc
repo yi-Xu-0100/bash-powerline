@@ -1,14 +1,15 @@
 # change
 
+# disable/enable 8bit input
 set input-meta on
 set output-meta on
 set convert-meta off
+
+# none, visible or audible
 set bell-style none
 
 # origin
 
-# none, visible or audible
-set bell-style none
 
 # Ask before displaying >40 items
 # Since $WINDIR $PATH var can be in $PATH, this could list
@@ -19,11 +20,6 @@ set completion-query-items 40
 # on:  default on a Windows style console
 # off: default on a *nix style console
 set completion-ignore-case on
-
-# disable/enable 8bit input
-set input-meta on
-set output-meta on
-set convert-meta off
 
 # visible-stats
 # Append a mark according to the file type in a listing
